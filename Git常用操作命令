@@ -1,0 +1,62 @@
+常用的提交代码流程
+git status 查看工作区代码相对于暂存区的差别
+git add . 将当前目录下修改的所有代码从工作区添加到暂存区 . 代表当前目录
+git commit -m ‘注释’ 将缓存区内容添加到本地仓库并添加提交注释
+git pull origin master先将远程仓库master中的信息同步到本地仓库master中
+git push origin master 将本地仓库推送到远程服务器。
+
+// 查看本地存在的所有分支
+git branch 
+//切换到某个分支
+git checkout 分支名
+// 查看远程存在的所有分支 
+git branch -a 
+// 查看分支与远程分支追踪状态
+git branch -avv
+// 不带参数，列出已经存在的远程分支
+git remote
+// 查看当前的远程仓库及其地址
+git remote -v
+// 添加一个新的远程仓库,可以指定一个简单的名字,以便将来引用
+git remote add [shortname] [url]
+// 例如：
+git remote add pb git://github.com/paulboone/ticgit.git
+//之后就可以用字串 pb 指代对应的仓库地址了.比如说,要抓取所有 Paul 有的,
+//但本地仓库没有的信息,可以运行:
+git fetch pb
+
+// 现在， Paul 的主干分支(master)已经完全可以在本地访问了, 
+// 对应的名字是pb/master,你可以将它合并到自己的某个分支,或者切换到这个分支
+
+// 文件改动保存在暂存区
+git add --all
+// 暂存区的文件提交给本地库 -am 相当于 -a -m
+git commit -am "commit comment"
+// 本地库文件提交到远程库
+// 如果直接写git push，是push当前分支到当前分支的追踪关系分支
+//如果远程分支被省略，如上则表示将本地分支推送到与之存在追踪关系的远程分支（通常两者同名），如果该远程分支不存在，则会被新建
+git push origin master:ql-master
+// origin 代表远程主机，master代表本地分支，ql-master代表远程分支.
+// 如果远程分支ql-master不存在，则创建ql-master
+//推送空的本地分支到远程分支
+git push origin :ql-master
+// 等同于删除远程分支。
+git push origin –delete ql-master
+// origin代表远程主机，master代表本地分支。把远程分支信息同步到本地master分支
+git pull origin master
+
+//删除本地分支
+git branch -d ql-master
+
+合并分支，如将dev分支合并到远程master分支
+//首先切换到master分支
+git checkout master
+// 同步远程master分支信息
+git pull origin master
+// 合并dev分支信息
+git merge dev
+// 查看合并后的改动
+git status
+//推送改动信息到远程master分支
+git push origin master
+
