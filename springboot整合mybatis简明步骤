@@ -7,17 +7,19 @@
 	</parent>
   
   <dependencies>
-    <dependency>
-			<groupId>com.baomidou</groupId>
-			<artifactId>mybatis-plus-boot-starter</artifactId>
-			<version>3.2.0</version>
-		</dependency>
   
     <dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-      <version>8.0.17</version>
-		</dependency>
+	<groupId>com.baomidou</groupId>
+	<artifactId>mybatis-plus-boot-starter</artifactId>
+	<version>3.2.0</version>
+   </dependency>
+  
+   <dependency>
+	<groupId>mysql</groupId>
+	<artifactId>mysql-connector-java</artifactId>
+        <version>8.0.17</version>
+  </dependency>
+  
   </dependencies>
   
 第二步：application.properties添加配置
@@ -76,5 +78,18 @@ public class StudySpringbootApplicationTests {
 
 }
 
+启动类
+@SpringBootApplication
+public class StudySpringbootApplication {
 
+	public static void main(String[] args) {
+		SpringApplication.run(StudySpringbootApplication.class, args);
+	}
+	
+	// mybatis-plus提供的分页功能
+	@Bean
+	public PaginationInterceptor paginationInterceptor() {
+		return new PaginationInterceptor();
+	}
+}
 
