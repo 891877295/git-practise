@@ -65,7 +65,7 @@ public interface UserMapper extends BaseMapper<User> {
 
 第五步：编写测试类
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = StudySpringbootApplication.class ) //需要制定主启动类，否则注入不了mapper
+@SpringBootTest(classes = StudySpringbootApplication.class ) //需要指明主启动类，否则注入不了mapper
 public class StudySpringbootApplicationTests {
 
 	@Autowired
