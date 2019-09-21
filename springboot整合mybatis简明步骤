@@ -27,6 +27,8 @@
 mybatis-plus.mapper-locations=mybatis/mapper/*.xml
 # 数据表对应实体所在的全包路径
 mybatis-plus.type-aliases-package=com.study.entity
+# 打印sql
+mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
 
 # 数据库连接配置
 spring.datasource.url=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
