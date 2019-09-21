@@ -1,10 +1,10 @@
 第一步：maven引入依赖文件
 <parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.1.8.RELEASE</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-parent</artifactId>
+	<version>2.1.8.RELEASE</version>
+	<relativePath/> <!-- lookup parent from repository -->
+</parent>
   
   <dependencies>
   
@@ -79,6 +79,8 @@ public class StudySpringbootApplicationTests {
 }
 
 启动类
+
+package com.study
 @SpringBootApplication
 public class StudySpringbootApplication {
 
