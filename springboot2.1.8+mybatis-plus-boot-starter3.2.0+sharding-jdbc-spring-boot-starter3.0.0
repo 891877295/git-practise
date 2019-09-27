@@ -1,0 +1,61 @@
+1 application.properties配置文件
+#mybatis-plus.mapper-locations=mybatis/mapper/*.xml 指定mapper.xml文件时需要开启
+mybatis-plus.type-aliases-package=com.example.entity
+mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+spring.main.allow-bean-definition-overriding=true
+
+sharding.jdbc.datasource.names=sharding-0,sharding-1
+sharding.jdbc.datasource.sharding-0.type=com.alibaba.druid.pool.DruidDataSource
+sharding.jdbc.datasource.sharding-0.driver-class-name=com.mysql.cj.jdbc.Driver
+sharding.jdbc.datasource.sharding-0.url=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+sharding.jdbc.datasource.sharding-0.username=root
+sharding.jdbc.datasource.sharding-0.password=aaaa
+
+sharding.jdbc.datasource.sharding-1.type=com.alibaba.druid.pool.DruidDataSource
+sharding.jdbc.datasource.sharding-1.driver-class-name=com.mysql.cj.jdbc.Driver
+sharding.jdbc.datasource.sharding-1.url=jdbc:mysql://localhost:3306/sharding-1?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+sharding.jdbc.datasource.sharding-1.username=root
+sharding.jdbc.datasource.sharding-1.password=aaaa
+sharding.jdbc.config.sharding.props.sql.show=true
+
+sharding.jdbc.config.sharding.tables.t_user.key-generator-column-name=id
+sharding.jdbc.config.sharding.tables.t_user.actual-data-nodes=sharding-${0..1}.t_user${0..2}
+sharding.jdbc.config.sharding.tables.t_user.database-strategy.inline.sharding-column=user_id
+sharding.jdbc.config.sharding.tables.t_user.database-strategy.inline.algorithm-expression=sharding-${user_id % 2}
+sharding.jdbc.config.sharding.tables.t_user.table-strategy.inline.sharding-column=user_id
+sharding.jdbc.config.sharding.tables.t_user.table-strategy.inline.algorithm-expression=t_user${user_id % 3}
+
+2 Mapper文件
+package com.example.mapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example.entity.User;
+import org.apache.ibatis.annotations.Mapper;
+@Mapper
+public interface UserMapper extends BaseMapper<User> {
+}
+
+3 主启动类
+package com.example;
+import com.baomidou.mybatisplus.extension.plugins.PaginationInterceptor;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+@EnableSwagger2
+@SpringBootApplication
+@EnableConfigurationProperties //使 使用 @ConfigurationProperties 注解的类生效。
+@EnableTransactionManagement // proxyTargetClass 默认为false,需要事务控制的方法需要加上@Transactional
+public class DemoApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(DemoApplication.class, args);
+	}
+
+	@Bean //分页配置
+	public PaginationInterceptor paginationInterceptor() {
+		return new PaginationInterceptor();
+	}
+}
