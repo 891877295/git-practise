@@ -94,7 +94,7 @@ public class DemoApplicationTests {
 	UserMapper userMapper;
 
 	@Test
-	public void userServiceTest() {
+	public void userPageTest() {
 		Page<User> userPage = new Page<>(1,3);
 		QueryWrapper<User> query = new QueryWrapper<>();
 		query.like("name","test");
