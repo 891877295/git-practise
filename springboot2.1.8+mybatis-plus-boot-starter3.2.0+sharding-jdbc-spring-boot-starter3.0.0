@@ -29,7 +29,26 @@ sharding.jdbc.config.sharding.tables.t_user.database-strategy.inline.algorithm-e
 sharding.jdbc.config.sharding.tables.t_user.table-strategy.inline.sharding-column=user_id
 sharding.jdbc.config.sharding.tables.t_user.table-strategy.inline.algorithm-expression=t_user${user_id % 3}
 
-2 Mapper文件
+2 实体文件和Mapper文件
+package com.example.entity;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+import lombok.ToString;
+import java.io.Serializable;
+@Data
+@ToString
+@TableName(value = "t_user")
+public class User implements Serializable {
+    private Long id;
+
+    private Integer userId;
+
+    private String name;
+
+    private Integer age;
+
+}
+
 package com.example.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.entity.User;
