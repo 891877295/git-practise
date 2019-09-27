@@ -1,4 +1,4 @@
-#sharding-jdbc官方示例配置https://shardingsphere.apache.org/document/current/en/manual/sharding-jdbc/configuration/config-spring-boot/
+#sharding-jdbc3.X官方示例配置https://shardingsphere.apache.org/document/legacy/3.x/document/en/manual/sharding-jdbc/configuration/config-spring-boot/
 1 application.properties配置文件
 #mybatis-plus.mapper-locations=mybatis/mapper/*.xml 指定mapper.xml文件时需要开启
 mybatis-plus.type-aliases-package=com.example.entity
