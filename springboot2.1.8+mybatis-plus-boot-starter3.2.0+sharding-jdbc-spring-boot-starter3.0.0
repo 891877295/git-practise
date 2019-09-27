@@ -2,6 +2,7 @@
 #mybatis-plus.mapper-locations=mybatis/mapper/*.xml 指定mapper.xml文件时需要开启
 mybatis-plus.type-aliases-package=com.example.entity
 mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+#设置为true时，后定义的bean会覆盖之前定义的相同名称的bean。sharding jdbc datasoucre会覆盖springboot默认配置的jdbc datasoucre
 spring.main.allow-bean-definition-overriding=true
 #如果是Hikari连接池 
 #sharding.jdbc.datasource.sharding-0.type=com.zaxxer.hikari.HikariDataSource
