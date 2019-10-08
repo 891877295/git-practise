@@ -5,21 +5,23 @@ mybatis-plus.type-aliases-package=com.example.entity
 mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
 #设置为true时，后定义的bean会覆盖之前定义的相同名称的bean。sharding jdbc datasoucre会覆盖springboot默认配置的jdbc datasoucre
 spring.main.allow-bean-definition-overriding=true
+
+sharding.jdbc.datasource.names=sharding-0,sharding-1
+sharding.jdbc.config.sharding.props.sql.show=true
 #如果是Hikari连接池 
 #sharding.jdbc.datasource.sharding-0.type=com.zaxxer.hikari.HikariDataSource
 #sharding.jdbc.datasource.sharding-0.jdbcUrl=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
-#如果是druid连接池 
-sharding.jdbc.datasource.names=sharding-0,sharding-1
-sharding.jdbc.config.sharding.props.sql.show=true
+#如果是druid连接池
 sharding.jdbc.datasource.sharding-0.type=com.alibaba.druid.pool.DruidDataSource
-sharding.jdbc.datasource.sharding-0.driver-class-name=com.mysql.cj.jdbc.Driver
 sharding.jdbc.datasource.sharding-0.url=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+
+sharding.jdbc.datasource.sharding-0.driver-class-name=com.mysql.cj.jdbc.Driver
 sharding.jdbc.datasource.sharding-0.username=root
 sharding.jdbc.datasource.sharding-0.password=aaaa
 
 sharding.jdbc.datasource.sharding-1.type=com.alibaba.druid.pool.DruidDataSource
-sharding.jdbc.datasource.sharding-1.driver-class-name=com.mysql.cj.jdbc.Driver
 sharding.jdbc.datasource.sharding-1.url=jdbc:mysql://localhost:3306/sharding-1?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+sharding.jdbc.datasource.sharding-1.driver-class-name=com.mysql.cj.jdbc.Driver
 sharding.jdbc.datasource.sharding-1.username=root
 sharding.jdbc.datasource.sharding-1.password=aaaa
 
@@ -33,6 +35,7 @@ sharding.jdbc.config.sharding.tables.t_user.table-strategy.inline.algorithm-expr
 
 2 实体文件和Mapper文件
 package com.example.entity;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.ToString;
@@ -42,7 +45,7 @@ import java.io.Serializable;
 @TableName(value = "t_user")
 public class User implements Serializable {
     private Long id;
-
+    @TableField("user_id")
     private Integer userId;
 
     private String name;
