@@ -20,6 +20,13 @@
         <version>8.0.17</version>
   </dependency>
   
+  <dependency>
+	<groupId>org.projectlombok</groupId>
+	<artifactId>lombok</artifactId>
+	<version>1.18.10</version>
+	<optional>true</optional>
+  </dependency>
+  
   </dependencies>
   
 第二步：application.properties添加配置
@@ -30,7 +37,7 @@ mybatis-plus.type-aliases-package=com.study.entity
 # 打印sql
 mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
 
-# 数据库连接配置
+# 数据库连接配置,useSSL根据自己的情况配置
 spring.datasource.url=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
 spring.datasource.username=root
 spring.datasource.password=aaaaaaaa
