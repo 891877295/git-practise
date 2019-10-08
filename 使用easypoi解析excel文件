@@ -1,0 +1,86 @@
+1 添加依赖
+ <dependency>
+      <groupId>xerces</groupId>
+      <artifactId>xercesImpl</artifactId>
+      <version>2.12.0</version>
+  </dependency>
+     <!-- easypoi -->
+  <dependency>
+      <groupId>cn.afterturn</groupId>
+      <artifactId>easypoi-base</artifactId>
+      <version>3.1.0</version>
+  </dependency>
+  <dependency>
+      <groupId>cn.afterturn</groupId>
+      <artifactId>easypoi-web</artifactId>
+      <version>3.1.0</version>
+  </dependency>
+  <dependency>
+      <groupId>cn.afterturn</groupId>
+      <artifactId>easypoi-annotation</artifactId>
+      <version>3.1.0</version>
+  </dependency>
+  
+ 2 解析后的实体
+  
+import cn.afterturn.easypoi.excel.annotation.Excel;
+ @Data
+public class Refund  implements Serializable {
+    @Excel(name = "子订单号")
+    private String orderSn;
+    @Excel(name = "结果")
+    private String result;
+}
+
+3 解析
+
+import cn.afterturn.easypoi.excel.ExcelImportUtil;
+import cn.afterturn.easypoi.excel.entity.ImportParams;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
+
+//fileOssUrl为excel文件所在的网络地址，clazz为解析后存储的实体类型，如Refund.class
+public <T> List<T> processExcel(String fileOssUrl,Class<T> clazz) {
+        InputStream is = null;
+        List<T> poList = null;
+        HttpURLConnection urlconn = null;
+        try {
+            URL url = new URL(fileOssUrl);
+            urlconn = (HttpURLConnection) url.openConnection();
+            urlconn.connect();
+
+            is = urlconn.getInputStream();
+            poList = ExcelImportUtil.<T>importExcelBySax(is, clazz, new ImportParams());
+        } catch (Exception e) {
+            System.err.println("com.sibu.mall.dps.task.service.AbstractExcelExportService.processExcel() 方法解析文件流异常：" + e);
+        }finally {
+            try {
+                if (is != null) {
+                    is.close();
+                }
+                if (urlconn != null) {
+                    urlconn.disconnect();
+                }
+            } catch (Exception e1) {
+                System.err.println("com.sibu.mall.dps.task.service.AbstractExcelExportService.processExcel() 方法关闭文件流异常：" + e1);
+            }
+        }
+
+        return poList;
+    }
+    
+    3 测试
+    public static void main(String[] args) {
+        List<Refund> refunds = processExcel("http://www.oss.com/a.xlsx", Refund.class);
+    }
+    
+    a.xlsx内容为
+    --------
+    子订单号|
+    --------
+    123454 |
+    --------
+    4564578|
+    
