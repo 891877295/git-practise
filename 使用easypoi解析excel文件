@@ -54,7 +54,7 @@ public <T> List<T> processExcel(String fileOssUrl,Class<T> clazz) {
             is = urlconn.getInputStream();
             poList = ExcelImportUtil.<T>importExcelBySax(is, clazz, new ImportParams());
         } catch (Exception e) {
-            System.err.println("com.sibu.mall.dps.task.service.AbstractExcelExportService.processExcel() 方法解析文件流异常：" + e);
+            System.err.println("AbstractExcelExportService.processExcel() 方法解析文件流异常：" + e);
         }finally {
             try {
                 if (is != null) {
@@ -64,7 +64,7 @@ public <T> List<T> processExcel(String fileOssUrl,Class<T> clazz) {
                     urlconn.disconnect();
                 }
             } catch (Exception e1) {
-                System.err.println("com.sibu.mall.dps.task.service.AbstractExcelExportService.processExcel() 方法关闭文件流异常：" + e1);
+                System.err.println("AbstractExcelExportService.processExcel() 方法关闭文件流异常：" + e1);
             }
         }
 
