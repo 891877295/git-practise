@@ -90,8 +90,8 @@ public class StudySpringbootApplicationTests {
 	public void testUserPage() {
 		Page<User> userPage = new Page<>(1,3);
 		QueryWrapper<User> query = new QueryWrapper<>();
-		query.like("name","test");
-		//SELECT id,name,user_id,age FROM t_user0 WHERE (name LIKE '%test%' AND age = 18) 
+		query.likeLeft("name","test");
+		//SELECT id,name,user_id,age FROM t_user WHERE (name LIKE 'test%' AND age = 18) 
 		IPage<User> page = userMapper.selectPage(userPage,query);
 		List<User> users =page.getRecords();
 		System.err.println(page.getTotal());
