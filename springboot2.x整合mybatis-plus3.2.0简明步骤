@@ -45,7 +45,8 @@ spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 第三步：编写实体类
 package com.study.entity;
-
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import XXX;
 
 @Data
