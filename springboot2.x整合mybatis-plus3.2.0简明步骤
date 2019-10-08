@@ -37,7 +37,7 @@ mybatis-plus.type-aliases-package=com.study.entity
 # 打印sql
 mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
 
-# 数据库连接配置,useSSL根据自己的情况配置
+# 数据库连接配置,databaseName和useSSL根据自己的情况配置
 spring.datasource.url=jdbc:mysql://localhost:3306/databaseName?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
 spring.datasource.username=root
 spring.datasource.password=aaaaaaaa
