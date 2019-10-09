@@ -10,17 +10,17 @@ sharding.jdbc.datasource.names=sharding-0,sharding-1
 sharding.jdbc.config.sharding.props.sql.show=true
 #如果是Hikari连接池 
 #sharding.jdbc.datasource.sharding-0.type=com.zaxxer.hikari.HikariDataSource
-#sharding.jdbc.datasource.sharding-0.jdbcUrl=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+#sharding.jdbc.datasource.sharding-0.jdbcUrl=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&tinyInt1isBit=false&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
 #如果是druid连接池
 sharding.jdbc.datasource.sharding-0.type=com.alibaba.druid.pool.DruidDataSource
-sharding.jdbc.datasource.sharding-0.url=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+sharding.jdbc.datasource.sharding-0.url=jdbc:mysql://localhost:3306/sharding-0?useUnicode=true&tinyInt1isBit=false&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
 
 sharding.jdbc.datasource.sharding-0.driver-class-name=com.mysql.cj.jdbc.Driver
 sharding.jdbc.datasource.sharding-0.username=root
 sharding.jdbc.datasource.sharding-0.password=aaaa
 
 sharding.jdbc.datasource.sharding-1.type=com.alibaba.druid.pool.DruidDataSource
-sharding.jdbc.datasource.sharding-1.url=jdbc:mysql://localhost:3306/sharding-1?useUnicode=true&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+sharding.jdbc.datasource.sharding-1.url=jdbc:mysql://localhost:3306/sharding-1?useUnicode=true&tinyInt1isBit=false&characterEncoding=utf8&useSSL=true&allowMultiQueries=true&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
 sharding.jdbc.datasource.sharding-1.driver-class-name=com.mysql.cj.jdbc.Driver
 sharding.jdbc.datasource.sharding-1.username=root
 sharding.jdbc.datasource.sharding-1.password=aaaa
