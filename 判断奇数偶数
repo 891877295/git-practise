@@ -1,0 +1,34 @@
+public class JudgeOdd {
+
+    public static void main(String[] args) {
+        int x = -3;
+        int y = 3;
+
+        int b= 4;
+
+        System.out.println(isOdd(x));
+        System.out.println(isOdd(y));
+        System.out.println(isOdd(b));
+    }
+
+//奇数可以分为正奇数和负奇数。奇数的数学表达形式为 2k+1 (k≠0)。
+//取余%的运算结果的符号同左操作数的正负符号相同，
+// 所以如果digit是负奇数，则此表达式的结果会是-1，而不是1。
+    private static boolean isOdd(int digit) {
+//        return digit % 2 ==1 || digit % 2 == -1;//第一种写法
+//        优化为下面的写法，判断是偶数后取反
+//        return (digit % 2 ) != 0;//第二种写法
+
+//        右移一位相当于该数除以2，右移2位相当于该数除以4，结果没有小数位，都是取整。
+//        左移一位相当于该数乘以2，左移2位相当于该数乘以2^2=4。
+//        位运算：某数除以2结果取整，再乘以2不等于该数，则该数为奇数。
+//        return (digit>>1<<1 ) != digit;//第三种写法
+
+//        and运算通常用于二进制的取位操作。一个数 and 1的结果就是取二进制的最末位。
+//       二进制的最末位为0表示该数为偶数，最末位为1表示该数为奇数。
+//第四种写法，括号一定要写上
+        return (digit & 1) ==1;
+    }
+
+
+}
