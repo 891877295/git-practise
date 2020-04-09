@@ -57,7 +57,8 @@ package com.example.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.entity.User;
 import org.apache.ibatis.annotations.Mapper;
-@Mapper
+
+@Mapper //这里用@Mapper注解,启动类上就不需要@MapperScan("com.example.mapper")
 public interface UserMapper extends BaseMapper<User> {
 }
 
