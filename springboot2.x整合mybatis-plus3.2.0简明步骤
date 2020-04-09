@@ -13,7 +13,7 @@
 	<artifactId>mybatis-plus-boot-starter</artifactId>
 	<version>3.2.0</version>
    </dependency>
-  
+  <-- 与mysql版本对应-->
    <dependency>
 	<groupId>mysql</groupId>
 	<artifactId>mysql-connector-java</artifactId>
