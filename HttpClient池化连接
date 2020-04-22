@@ -147,8 +147,6 @@ public final class HttpUtils {
         String result = null;
         CloseableHttpResponse response = null;
         try{
-
-//   使用response.close();结果就是连接会被关闭，并且不能被复用，这样就失去了采用连接池的意义。
             response = client.execute(request);
             if(response.getStatusLine().getStatusCode()== HttpStatus.SC_OK){
                 //获取结果实体
