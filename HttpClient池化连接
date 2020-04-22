@@ -44,6 +44,7 @@ public class HttpClientConfig {
         connectionManager.setMaxTotal(maxTotal);
         connectionManager.setDefaultMaxPerRoute(defaultMaxPerRoute);
         connectionManager.setValidateAfterInactivity(socketTimeout);
+        connectionManager.closeIdleConnections(500, TimeUnit.MILLISECONDS);
         return connectionManager;
     }
 
@@ -98,15 +99,29 @@ public class HttpClientConfig {
     
     对应的application.properties配置
 #The config for HttpClient
-http.maxTotal=600
-http.defaultMaxPerRoute=50
+http.maxTotal=15
+http.defaultMaxPerRoute=5
 http.connectTimeout=1000
-http.connectionRequestTimeout=500
+http.connectionRequestTimeout=3000
 http.socketTimeout=10000
 
 
 服务类:
 
+/**
+ * ESTABLISHED 表示正在进行网络连接的数量
+ * TIME_WAIT 表示表示等待系统主动关闭网络连接的数量
+ * CLOSE_WAIT 表示被动等待程序关闭的网络连接数量
+ *
+ * 比如服务器A去请求服务器B上面的a.txt文件资源，
+ * 正常情况下，如果请求成功，那么在抓取完资源后服务器A会主动发出关闭连接的请求，
+ * 这个时候就是主动关闭连接，连接状态我们可以看到是TIME_WAIT。
+ * 一旦发生异常呢？
+ * 假设请求的a.txt在服务器B上并不存在，那么这个时候就会由服务器B发出关闭连接的请求，
+ * 服务器A就是被动的关闭了连接，如果服务器A被动关闭连接之后自己并没有释放连接，
+ * 那就会造成CLOSE_WAIT的状态了。
+ *
+ */
 @Component
 public final class HttpUtils {
 
@@ -128,21 +143,33 @@ public final class HttpUtils {
 
     }
 
-    private static String doSend(CloseableHttpClient client, HttpUriRequest request, String encoding) {
+    private static String doSend(CloseableHttpClient client, HttpRequestBase request, String encoding) {
         String result = null;
+        CloseableHttpResponse response = null;
         try{
+
 //   使用response.close();结果就是连接会被关闭，并且不能被复用，这样就失去了采用连接池的意义。
-            CloseableHttpResponse response = client.execute(request);
-            //获取结果实体
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                //按指定编码转换结果实体为String类型
-               result = EntityUtils.toString(entity, encoding);
+            response = client.execute(request);
+            if(response.getStatusLine().getStatusCode()== HttpStatus.SC_OK){
+                //获取结果实体
+                HttpEntity entity = response.getEntity();
+                if (entity != null) {
+                    //按指定编码转换结果实体为String类型
+                    result = EntityUtils.toString(entity, encoding);
+                    EntityUtils.consume(entity);
+                }
+            }else{
+                request.abort();
             }
-            EntityUtils.consume(entity);
 
         }catch (Exception e){
-            System.err.println(e.getMessage());
+            request.abort();
+            HttpClientUtils.closeQuietly(response);
+        }finally {
+            if(request != null){
+                request.releaseConnection();
+            }
+
         }
 
         return result;
@@ -217,7 +244,9 @@ public final class HttpUtils {
 
 }
 
+
 测试类:
+
 
 @SpringBootTest
 class StudySpringApplicationTests {
@@ -229,26 +258,42 @@ class StudySpringApplicationTests {
     @Autowired
     private HttpUtils httpUtils;
 
-    private final static Executor executor = Executors.newCachedThreadPool();//启用多线程
+    HttpRequestUtils httpClientUtils;
+
+//    private final static Executor executor = Executors.newFixedThreadPool(10);//启用多线程
 
     @Test
-    public void httpConnect(){
-        for (int i = 0; i < 1000; i++) {
-            int j = i;
-            executor.execute(new Runnable() {
+    public void httpConnect() throws IOException,InterruptedException {
+        int count = 1000;
+        ExecutorService executors = Executors.newFixedThreadPool(count,
+                new ThreadFactory() {
+                    AtomicInteger atomic = new AtomicInteger();
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "Thread" + this.atomic.getAndIncrement());
+                    }
+                });
+
+
+        CountDownLatch countDownLatch = new CountDownLatch(count);
+        for (int i = 0; i < count; i++) {
+            executors.execute(new Runnable() {
                 @Override
                 public void run() {
                     try{
-                       httpUtils.get("https://www.toutiao.com/a6817717508913496589","utf-8");
-                       Thread.sleep(500);
+                        String res = httpUtils.get("https://blog.csdn.net/ycb1689/article/details/80521650","utf-8");
+//                        System.out.println(res);
+
+                        countDownLatch.countDown();
                     }catch(Exception e){
 
-
+                        System.out.println("errMsg:"+e.getLocalizedMessage());
                     }
                 }
             });
 
         }
 
+        countDownLatch.await();
+        executors.shutdown();
     }
 }
