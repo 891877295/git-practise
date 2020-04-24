@@ -1,189 +1,179 @@
-环境:spring-boot-2.2.6.RELEASE + httpclient-4.5.12 + commons-lang3-3.10
-配置类:
-import org.apache.http.client.HttpClient;
+httpclient-4.5.12 + commons-lang3-3.10
+package org.qin.net.util;
+
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.conn.HttpClientConnectionManager;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.client.entity.GzipDecompressingEntity;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.HttpClientUtils;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 
-import java.nio.charset.Charset;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * HttpClient的配置类
- */
-@Configuration
-@ConfigurationProperties(prefix = "http")
-public class HttpClientConfig {
+public class HttpUtils {
+    //报文压缩协议类型
+    private static final String GZIP = "gzip";
 
-    private Integer maxTotal;// 最大连接数
+    private static int maxTotal = 800;// 最大连接数
 
-    private Integer defaultMaxPerRoute;// 每个host的可发起的最大连接数
+    private static int defaultMaxPerRoute = 800;// 每个host的可发起的最大连接数
 
-    private Integer connectTimeout;// http client端与server端建立连接超时时间
+    private static int connectTimeout = 3000;// http client端与server端建立连接超时时间
 
-    private Integer connectionRequestTimeout;// 从连接池中获取到连接的最长时间
+    private static int connectionRequestTimeout = 5000;// 从连接池中获取到连接的等待时间
 
-    private Integer socketTimeout;// http server端响应超时时间
+    private static int socketTimeout = 60000;// http server端响应超时时间
 
-    /**
-     * HttpClient连接池
-     * @return
-     */
-    @Bean
-    public HttpClientConnectionManager httpClientConnectionManager() {
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+    //连接池管理器
+    private static PoolingHttpClientConnectionManager connectionManager;
+
+
+    private final static Object syncLock = new Object();
+
+    private static CloseableHttpClient httpClient;
+
+    static {
+
+        connectionManager = new PoolingHttpClientConnectionManager();
+        //设置连接池的最大连接数
         connectionManager.setMaxTotal(maxTotal);
-        connectionManager.setDefaultMaxPerRoute(defaultMaxPerRoute);
         connectionManager.setValidateAfterInactivity(socketTimeout);
-        connectionManager.closeIdleConnections(500, TimeUnit.MILLISECONDS);
-        return connectionManager;
-    }
+        //默认的每个路由的最大连接数
+        connectionManager.setDefaultMaxPerRoute(defaultMaxPerRoute);
 
-    /**
-     * 注册RequestConfig
-     * @return
-     */
-    @Bean
-    public RequestConfig requestConfig() {
-        return RequestConfig.custom().setConnectTimeout(connectTimeout)
-                .setConnectionRequestTimeout(connectionRequestTimeout)
-                .setSocketTimeout(socketTimeout)
+        connectionManager.closeIdleConnections(3, TimeUnit.SECONDS);
+
+        SocketConfig socketConfig = SocketConfig.custom()
+                .setTcpNoDelay(true)     //是否立即发送数据，设置为true会关闭Socket缓冲，默认为false
+                .setSoReuseAddress(true) //是否可以在一个进程关闭Socket后，即使它还没有释放端口，其它进程还可以立即重用端口
+                .setSoTimeout(socketTimeout) //接收数据的等待超时时间，单位ms
+                .setSoLinger(60)  //关闭Socket时，要么发送完所有数据，要么等待60s后，就关闭连接，此时socket.close()是阻塞的
+                .setSoKeepAlive(true)    //开启监视TCP连接是否有效
                 .build();
+        connectionManager.setDefaultSocketConfig(socketConfig);
+
+        getHttpClient();
     }
 
-    /**
-     * 注册HttpClient
-     * @param manager
-     * @param config
-     * @return
-     */
-    @Bean
-    public CloseableHttpClient httpClient(HttpClientConnectionManager manager, RequestConfig config) {
-        return HttpClientBuilder.create()
-                .setConnectionManager(manager)
-                .setDefaultRequestConfig(config)
-                .build();
-    }
-
-    @Bean
-    public ClientHttpRequestFactory requestFactory(CloseableHttpClient httpClient) {
-        return new HttpComponentsClientHttpRequestFactory(httpClient);
-    }
-    /**
-     * 使用HttpClient来初始化一个RestTemplate
-     */
-    @Bean
-    public RestTemplate restTemplate(ClientHttpRequestFactory requestFactory) {
-        RestTemplate template = new RestTemplate(requestFactory);
-
-        List<HttpMessageConverter<?>> list = template.getMessageConverters();
-        for (HttpMessageConverter<?> mc : list) {
-            if (mc instanceof StringHttpMessageConverter) {
-                ((StringHttpMessageConverter) mc).setDefaultCharset(Charset.forName("UTF-8"));
+    public static CloseableHttpClient getHttpClient() {
+        if (httpClient == null) {
+            synchronized (syncLock) {
+                if (httpClient == null) {
+                    RequestConfig requestConfig = RequestConfig.custom()
+                            .setSocketTimeout(socketTimeout)
+                            .setConnectTimeout(connectTimeout)
+                            .setConnectionRequestTimeout(connectionRequestTimeout) //从池中获取连接超时时间
+                            .setExpectContinueEnabled(true)
+                            .build();
+                    httpClient = HttpClients.custom()
+                            .setConnectionManager(connectionManager) //连接池管理器
+                            //.setProxy(new HttpHost("myproxy", 8080))       //设置代理
+//                            .setDefaultCookieStore(cookieStore) // Cookie存储
+                            .setDefaultRequestConfig(requestConfig) //默认请求配置
+                            .setConnectionManagerShared(true) //支持连接共享
+                            .build();
+                }
             }
         }
-        return template;
+        return httpClient;
     }
-    
-    // getter和setter方法
-    }
-    
-    对应的application.properties配置
-#The config for HttpClient
-http.maxTotal=15
-http.defaultMaxPerRoute=5
-http.connectTimeout=1000
-http.connectionRequestTimeout=3000
-http.socketTimeout=10000
 
 
-服务类:
+    public static String post(String url, Map<String, String> paraMap, String encoding) throws IOException {
 
-/**
- * ESTABLISHED 表示正在进行网络连接的数量
- * TIME_WAIT 表示表示等待系统主动关闭网络连接的数量
- * CLOSE_WAIT 表示被动等待程序关闭的网络连接数量
- *
- * 比如服务器A去请求服务器B上面的a.txt文件资源，
- * 正常情况下，如果请求成功，那么在抓取完资源后服务器A会主动发出关闭连接的请求，
- * 这个时候就是主动关闭连接，连接状态我们可以看到是TIME_WAIT。
- * 一旦发生异常呢？
- * 假设请求的a.txt在服务器B上并不存在，那么这个时候就会由服务器B发出关闭连接的请求，
- * 服务器A就是被动的关闭了连接，如果服务器A被动关闭连接之后自己并没有释放连接，
- * 那就会造成CLOSE_WAIT的状态了。
- *
- */
-@Component
-public final class HttpUtils {
-
-    @Autowired
-    private CloseableHttpClient client;
-
-    public String post(String url, Map<String,String> paraMap, String encoding) throws IOException {
-
-        if(null==encoding){
-            encoding="utf-8";
+        if (null == encoding) {
+            encoding = "utf-8";
         }
 
         //创建post方式请求对象
         HttpPost httpPost = new HttpPost(url);
 
-        setParams(httpPost,paraMap,encoding);
+        setParams(httpPost, paraMap, encoding);
 
-        return doSend(client,httpPost,encoding);
+        return doSend(httpClient, httpPost, encoding);
 
     }
+
+    private static AtomicInteger err = new AtomicInteger();
+    private static AtomicInteger exp = new AtomicInteger();
 
     private static String doSend(CloseableHttpClient client, HttpRequestBase request, String encoding) {
         String result = null;
         CloseableHttpResponse response = null;
-        try{
+        try {
             response = client.execute(request);
-            if(response.getStatusLine().getStatusCode()== HttpStatus.SC_OK){
+            if (response == null) {
+//                err.addAndGet(1);
+                request.abort();
+                return null;
+            }
+            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 //获取结果实体
                 HttpEntity entity = response.getEntity();
+                if (entity == null) {
+                    request.abort();
+                    return null;
+                }
+                // 判断返回报文是否压缩
+                if (entity.getContentEncoding() != null && GZIP.equalsIgnoreCase(entity.getContentEncoding().getName())) {
+                    entity = new GzipDecompressingEntity(entity);
+                }
                 if (entity != null) {
                     //按指定编码转换结果实体为String类型
                     result = EntityUtils.toString(entity, encoding);
-                    EntityUtils.consume(entity);
                 }
-            }else{
+            } else {
+//                err.addAndGet(1);
+                // 不打算读取response body ,调用abort()
+//                连接不会被重用，但是由它持有的所有级别的资源将会被正确释放。
                 request.abort();
             }
 
-        }catch (Exception e){
+        } catch (Exception e) {
+//            exp.addAndGet(1);
             request.abort();
+
+        } finally {
+
             HttpClientUtils.closeQuietly(response);
-        }finally {
-            if(request != null){
-                request.releaseConnection();
-            }
 
         }
 
         return result;
     }
 
-    private static void setParams(HttpPost httpPost, Map<String, String> paraMap,String encoding) throws UnsupportedEncodingException {
-        if(!ObjectUtils.isEmpty(paraMap)){
+    private static void setParams(HttpPost httpPost, Map<String, String> paraMap, String encoding) throws UnsupportedEncodingException {
+        if (!ObjectUtils.isEmpty(paraMap)) {
             //装填参数
             List<NameValuePair> params = new ArrayList<>();
             for (Map.Entry<String, String> entry : paraMap.entrySet()) {
-                if(!StringUtils.isBlank(entry.getValue())){
+                if (!StringUtils.isBlank(entry.getValue())) {
                     params.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
                 }
             }
             //设置参数到请求对象中
-            if(!ObjectUtils.isEmpty(params)) {
+            if (!ObjectUtils.isEmpty(params)) {
                 httpPost.setEntity(new UrlEncodedFormEntity(params, encoding));
             }
         }
@@ -192,22 +182,22 @@ public final class HttpUtils {
         //指定报文头【Content-type】、【User-Agent】
         httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded");
 //        httpPost.setHeader("User-Agent", "Mozilla/5.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
-        httpPost.setHeader("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36");
+        httpPost.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36");
 
     }
 
 
-    public String post(String url, String json, String encoding)  {
-   //        checkJson(json);
-        if(null==encoding){
-            encoding="utf-8";
+    public static String post(String url, String json, String encoding) {
+        //        checkJson(json);
+        if (null == encoding) {
+            encoding = "utf-8";
         }
 
         // 创建post方式请求对象
         HttpPost httpPost = new HttpPost(url);
 
 //        httpPost.addHeader("Cookie", cookieStore.toString());
-        if(!StringUtils.isBlank(json)){
+        if (!StringUtils.isBlank(json)) {
             // 设置参数到请求对象中
             StringEntity stringEntity = new StringEntity(json, ContentType.APPLICATION_JSON);
             stringEntity.setContentEncoding(encoding);
@@ -216,56 +206,38 @@ public final class HttpUtils {
 
         httpPost.setHeader("Content-Type", "application/x-www-form-urlencoded");
 //        httpPost.setHeader("User-Agent", "Mozilla/5.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
-        httpPost.setHeader("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36");
+        httpPost.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36");
 
-        return doSend(client,httpPost,encoding);
+        return doSend(httpClient, httpPost, encoding);
     }
 
+//    检查是否符合json格式
 //    private static boolean checkJson(String json) {
 //        return true;
 //    }
 
 
-    public String get(String url, String encoding) throws IOException {
+    public static String get(String url, String encoding) throws IOException {
 
-        if(null==encoding){
-            encoding="utf-8";
+        if (null == encoding) {
+            encoding = "utf-8";
         }
 
         // 创建get方式请求对象
         HttpGet httpGet = new HttpGet(url);
         httpGet.addHeader("Content-type", "application/json");
 
-        return doSend(client,httpGet,encoding);
+        return doSend(httpClient, httpGet, encoding);
 
     }
 
-}
+    public static void main(String[] args) throws InterruptedException {
 
-
-测试类:
-
-
-@SpringBootTest
-class StudySpringApplicationTests {
-
-    @Test
-    void contextLoads() {
-    }
-
-    @Autowired
-    private HttpUtils httpUtils;
-
-    HttpRequestUtils httpClientUtils;
-
-//    private final static Executor executor = Executors.newFixedThreadPool(10);//启用多线程
-
-    @Test
-    public void httpConnect() throws IOException,InterruptedException {
-        int count = 1000;
+        int count = 500;
         ExecutorService executors = Executors.newFixedThreadPool(count,
                 new ThreadFactory() {
                     AtomicInteger atomic = new AtomicInteger();
+
                     public Thread newThread(Runnable r) {
                         return new Thread(r, "Thread" + this.atomic.getAndIncrement());
                     }
@@ -277,14 +249,14 @@ class StudySpringApplicationTests {
             executors.execute(new Runnable() {
                 @Override
                 public void run() {
-                    try{
-                        String res = httpUtils.get("https://blog.csdn.net/ycb1689/article/details/80521650","utf-8");
+                    try {
+                        String res = get("https://www.baidu.com", "utf-8");
 //                        System.out.println(res);
 
                         countDownLatch.countDown();
-                    }catch(Exception e){
+                    } catch (Exception e) {
 
-                        System.out.println("errMsg:"+e.getLocalizedMessage());
+                        System.out.println("errMsg:" + e.getLocalizedMessage());
                     }
                 }
             });
@@ -293,5 +265,8 @@ class StudySpringApplicationTests {
 
         countDownLatch.await();
         executors.shutdown();
+
+        System.err.println(err.get() + "----" + exp.get());
     }
+
 }
