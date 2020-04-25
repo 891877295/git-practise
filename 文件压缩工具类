@@ -76,7 +76,7 @@ public class ZipFileUtil {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException(zipFileName + " 文件压缩出错!\n"+e.toString());
+            throw new RuntimeException(zipFileName + " :Error in file compression processing!");
         }
 
     }
