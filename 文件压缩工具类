@@ -1,0 +1,89 @@
+package org.qin.util.file;
+
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public class ZipFileUtil {
+
+    public static void zipFilePip(String destPath, String destZipFileName, String directory) {
+        zipFilePip(destPath + destZipFileName, directory);
+    }
+
+    /**
+     * 将指定目录下的文件(不含子文件夹)打包到指定的压缩文件中.
+     * 如果压缩文件没有指定名称,那么自动将压缩文件的名字设置为:源文件夹的名称.zip
+     *
+     * @param zipFileName zip文件的存放路径
+     * @param directory 源文件夹
+     */
+    public static void zipFilePip(String zipFileName, String directory) {
+        File dFile = new File(directory);
+        if (!dFile.isDirectory()) {
+            throw new IllegalArgumentException(directory + " is not a directory.");
+        }
+
+        if (StringUtils.isBlank(zipFileName)) {
+            zipFileName = dFile.getAbsoluteFile() + ".zip";
+        }
+        System.out.println(zipFileName);
+        File[] files = dFile.listFiles();
+        List<File> listFiles = new ArrayList<>();
+        for (File file : files) {
+            if (!file.isDirectory()) {
+                listFiles.add(file);
+            }
+        }
+
+        zipFilePip(zipFileName, listFiles);
+    }
+
+    public static void zipFilePip(String zipFileName, List<File> listFiles) {
+        if (listFiles == null || listFiles.size() == 0) {
+            return;
+        }
+        if (StringUtils.isBlank(zipFileName)) {
+            throw new IllegalArgumentException("The name of the zip file is not specified.");
+        }
+        File zipFile = new File(zipFileName);
+        try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(zipFile));
+             WritableByteChannel writableByteChannel = Channels.newChannel(zipOut)) {
+
+            for (int i = 0, size = listFiles.size(); i < size; i++) {
+                File file = listFiles.get(i);
+                if(file.isDirectory()){//文件夹不打包到压缩文件
+                    continue;
+                }
+                zipOut.putNextEntry(new ZipEntry(file.getName()));
+
+                long fileSize = file.length();
+
+                MappedByteBuffer mappedByteBuffer = new RandomAccessFile(file, "r")
+                        .getChannel()
+                        .map(FileChannel.MapMode.READ_ONLY, 0, fileSize);
+
+                writableByteChannel.write(mappedByteBuffer);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(zipFileName + " 文件压缩出错!\n"+e.toString());
+        }
+
+    }
+
+    public static void main(String[] args) {
+        long start = System.currentTimeMillis();
+        zipFilePip("", "d:/jpg");
+        System.out.println("ZipFileUtil 压缩耗时:" + (System.currentTimeMillis() - start) + "毫秒.");
+    }
+}
