@@ -1,66 +1,200 @@
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-import org.objenesis.Objenesis;
-import org.objenesis.ObjenesisStd;
 
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
+import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
+import org.objenesis.Objenesis;
+import org.objenesis.ObjenesisStd;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+@SuppressWarnings("ALL")
 public class ProtostuffUtil {
-	private static Map<Class<?>, Schema<?>> cachedSchema = new ConcurrentHashMap<>();
-	 
+
+    private static Logger logger = LoggerFactory.getLogger(ProtostuffUtil.class);
     private static Objenesis objenesis = new ObjenesisStd(true);
- 
-    private ProtostuffUtil() {
-    }
- 
     /**
-     * 序列化（对象 -> 字节数组）
+     * 需要使用包装类进行序列化/反序列化的class集合
      */
-    @SuppressWarnings("unchecked")
-    public static <T> byte[] serialize(T obj) {
-        Class<T> cls = (Class<T>) obj.getClass();
-        LinkedBuffer buffer = LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE);
-        try {
-            Schema<T> schema = getSchema(cls);
-            return ProtostuffIOUtil.toByteArray(obj, schema, buffer);
-        } catch (Exception e) {
-            throw new IllegalStateException(e.getMessage(), e);
-        } finally {
-            buffer.clear();
-        }
-    }
- 
+    private static final Set<Class<?>> WRAPPER_SET = new HashSet<>();
+
     /**
-     * 反序列化（字节数组 -> 对象）
+     * 序列化/反序列化包装类 Class 对象
      */
-    public static <T> T deserialize(byte[] data, Class<T> cls) {
-        try {
-            T message = objenesis.newInstance(cls);
-            Schema<T> schema = getSchema(cls);
-            ProtostuffIOUtil.mergeFrom(data, message, schema);
-            return message;
-        } catch (Exception e) {
-            throw new IllegalStateException(e.getMessage(), e);
-        }
+    private static final Class<Wrapper> WRAPPER_CLASS = Wrapper.class;
+
+    /**
+     * 序列化/反序列化包装类 Schema 对象
+     */
+    private static final Schema<Wrapper> WRAPPER_SCHEMA = RuntimeSchema.createFrom(WRAPPER_CLASS);
+
+    /**
+     * 缓存对象及对象schema信息集合
+     */
+    private static final Map<Class<?>, Schema<?>> CACHE_SCHEMA = new ConcurrentHashMap<>();
+
+    /**
+     * 预定义一些Protostuff无法直接序列化/反序列化的对象
+     */
+    static {
+        WRAPPER_SET.add(List.class);
+        WRAPPER_SET.add(ArrayList.class);
+        WRAPPER_SET.add(CopyOnWriteArrayList.class);
+        WRAPPER_SET.add(LinkedList.class);
+        WRAPPER_SET.add(Stack.class);
+        WRAPPER_SET.add(Vector.class);
+
+        WRAPPER_SET.add(Map.class);
+        WRAPPER_SET.add(HashMap.class);
+        WRAPPER_SET.add(TreeMap.class);
+        WRAPPER_SET.add(Hashtable.class);
+        WRAPPER_SET.add(SortedMap.class);
+        WRAPPER_SET.add(Set.class);
+        WRAPPER_SET.add(String.class);
+        WRAPPER_SET.add(Object.class);
     }
- 
-    @SuppressWarnings("unchecked")
+
+    /**
+     * 注册需要使用包装类进行序列化/反序列化的 Class 对象
+     *
+     * @param clazz 需要包装的类型 Class 对象
+     */
+    public static void addWrapperClass(Class clazz) {
+        WRAPPER_SET.add(clazz);
+    }
+
+    /**
+     * 获取序列化对象类型的schema
+     *
+     * @param cls 序列化对象的class
+     * @param <T> 序列化对象的类型
+     * @return 序列化对象类型的schema
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T> Schema<T> getSchema(Class<T> cls) {
-        Schema<T> schema = (Schema<T>) cachedSchema.get(cls);
+        Schema<T> schema = (Schema<T>) CACHE_SCHEMA.get(cls);
         if (schema == null) {
-        	schema = RuntimeSchema.getSchema(cls);
+            schema = RuntimeSchema.createFrom(cls);
             if (schema != null) {
-                cachedSchema.put(cls, schema);
+                CACHE_SCHEMA.put(cls, schema);
             }
         }
         return schema;
     }
 
+    /**
+     * 序列化对象
+     *
+     * @param obj 需要序列化的对象
+     * @param <T> 序列化对象的类型
+     * @return 序列化后的二进制数组
+     */
+
+    public static <T> byte[] serialize(T obj) {
+        Class<T> clazz = (Class<T>) obj.getClass();
+        LinkedBuffer buffer = LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE);
+        try {
+            Object serializeObject = obj;
+            Schema schema = WRAPPER_SCHEMA;
+            if (!WRAPPER_SET.contains(clazz)) {
+                schema = getSchema(clazz);
+            } else {
+                serializeObject = Wrapper.builder(obj);
+            }
+            return ProtostuffIOUtil.toByteArray(serializeObject, schema, buffer);
+        } catch (Exception e) {
+            logger.error("序列化对象异常 [" + obj + "]", e);
+            throw new IllegalStateException(e.getMessage(), e);
+        } finally {
+            buffer.clear();
+        }
+    }
+
+    /**
+     * 反序列化对象
+     *
+     * @param data  需要反序列化的二进制数组
+     * @param clazz 反序列化后的对象class
+     * @param <T>   反序列化后的对象类型
+     * @return 反序列化后的对象集合
+     */
+    public static <T> T deserialize(byte[] data, Class<T> clazz) {
+        if (WRAPPER_SET.contains(clazz)) {
+            Wrapper<T> wrapper = new Wrapper<>();
+            ProtostuffIOUtil.mergeFrom(data, wrapper, WRAPPER_SCHEMA);
+            return wrapper.getData();
+        } else {
+             /*clazz.newInstance() clazz类必须有默认的构造函数
+            objenesis.newInstance(clazz) clazz类没有默认的构造函数也可以构造实例对象*/
+            T message = objenesis.newInstance(clazz);
+            Schema<T> schema = getSchema(clazz);
+            ProtostuffIOUtil.mergeFrom(data, message, schema);
+            return message;
+        }
+    }
+
+
+    private static class Wrapper<T> {
+
+        private T data;
+
+        public static <T> Wrapper<T> builder(T data) {
+            Wrapper<T> wrapper = new Wrapper<>();
+            wrapper.setData(data);
+            return wrapper;
+        }
+
+        public T getData() {
+            return data;
+        }
+
+        public void setData(T data) {
+            this.data = data;
+        }
+    }
+
+
+    public static void main(String[] args) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("key1", "butioy");
+        map.put("key2", "protostuff");
+        map.put("key3", "serialize");
+//        JDK1.8有一个类`jdk.nashorn.internal.ir.debug.ObjectSizeCalculator`可以评估出对象的大小
+        long size = ObjectSizeCalculator.getObjectSize(map);
+
+        System.out.println("没有序列化之前的大小,size=" + size);
+//        spark库中有一个类`org.apache.spark.util.SizeEstimator`:SizeEstimator.estimate(obj)
+//        基于JDK1.5的Instrumentation,需要编译成jar调用，没有前者方便
+
+        Wrapper wrapper = Wrapper.builder(map);
+
+        byte[] serializeBytes = ProtostuffUtil.serialize(wrapper);
+        System.out.println("序列化map集合二进制数组长度 length=" + serializeBytes.length);
+
+        Wrapper deWrapper = ProtostuffUtil.deserialize(serializeBytes, Wrapper.class);
+
+        System.out.println("反序列化map对象：" + deWrapper.getData());
+
+
+        String str = "asdfasdgfsgdgdfhgfhgf";
+        long strsize = ObjectSizeCalculator.getObjectSize(str);
+        Wrapper strwrapper = Wrapper.builder(str);
+        System.out.println("字符串没有序列化之前的大小,size=" + strsize);
+        byte[] serializeStrBytes = ProtostuffUtil.serialize(strwrapper);
+        System.out.println("序列化字符串二进制数组长度 length=" + serializeStrBytes.length);
+
+        Wrapper deStrWrapper = ProtostuffUtil.deserialize(serializeStrBytes, Wrapper.class);
+
+        System.out.println("反序列化字符串对象：" + deStrWrapper.getData());
+
+
+    }
 }
 
 	<dependency>
